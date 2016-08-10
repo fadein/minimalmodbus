@@ -15,4 +15,7 @@ class Statistics():
                 string = string + str(j) + "\n"
             return string
 
+        def __getitem__(self, i):
+            return self.statistics[i]
+
 s = Statistics(4)

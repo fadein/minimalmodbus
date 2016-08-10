@@ -50,6 +50,8 @@ class Statistics():
                 string = string + str(j) + "\n"
             return string
 
+        def __getitem__(self, i):
+            return self.statistics[i]
 
 def echoTime():
         t = datetime.datetime.now(utc).strftime("%a %b %d %H:%M:%S %Z %Y")
@@ -71,7 +73,7 @@ def getModbusValues(dbg, address, ADDR_BASE, stats):
                         print modbusH
 
                 try:
-                        stats[id][total] = stats[id][total] + 1
+                        stats[id]['total'] = stats[id]['total'] + 1
                         print(echoTime())
                         holR=modbusH.read_registers(address - ADDR_BASE, 1)  # last parameter is # of registers.
                         print ("Holding Register -> Slave ID: <%d>  Address : %d  "%(id, address ) + " Value(s) : " + ",".join(str(v) for v in holR ) )
@@ -83,12 +85,12 @@ def getModbusValues(dbg, address, ADDR_BASE, stats):
                         inputR=modbusH.read_registers(register - ADDR_BASE, 1, 4) # last parameter is # of registers.
                         print ("Input Register -> Slave ID: <%d>  Address : %d  "%(id, register ) + " Value(s) : " + ",".join(str(v) for v in inputR ) )
 
-                        stats[id][success] = stats[id][success] + 1
+                        stats[id]['success'] = stats[id]['success'] + 1
                         time.sleep(1) #wait for a second
 
                 except IOError, e:
                         print "%s : %s : %s" % (echoTime(), e , e.errno)
-                        stats[id][failure] = stats[id][failure] + 1
+                        stats[id]['failure'] = stats[id]['failure'] + 1
 
                 print
                 time.sleep(cycleDelay)
@@ -117,9 +119,13 @@ try:
                 print
                 cycles = cycles + 1
                 time.sleep(5)
-except: KeyboardInterrupt:
+
+except KeyboardInterrupt:
         print
         print "Terminating program..."
 
 finally:
+        print "=================================================="
+        print "                 Final statistics"
+        print "=================================================="
         print statistics
