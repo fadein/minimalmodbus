@@ -1,18 +1,22 @@
 import minimalmodbus, time, serial, datetime, sys
+from argparse import ArgumentParser
 
 MAX_ADDR = 4
 COMPORT = 'COM8'
 add = 400
 ADDR_BASE = 1
-debug=False
+debug = False
 cycleDelay = .300
 
-if len(sys.argv) > 1 and sys.argv[1]:
-        COMPORT = sys.argv[1]
+parser = ArgumentParser()
+parser.add_argument("-c", "--comport", dest="comport", default="COM8", metavar="COM8", type=str,
+        help="COM port the ModBus network is on")
+parser.add_argument("-n", "--numsensors", dest="numsensors", default=1, metavar="N", type=int,
+        help="How many sensors to poll (i.e. maximum sensor address)")
+args = parser.parse_args()
 
-if len(sys.argv) > 2 and sys.argv[2]:
-        MAX_ADDR = int(sys.argv[2])
-
+COMPORT  = args.comport
+MAX_ADDR = args.numsensors
 
 minimalmodbus.BAUDRATE = 9600
 minimalmodbus.PARITY = 'N'
