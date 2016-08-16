@@ -3,8 +3,7 @@ from argparse import ArgumentParser
 
 MAX_DEVICE = 4
 COMPORT = 'COM8'
-addr = 400
-debug = False
+DEBUG = False
 cycleDelay = .300
 
 parser = ArgumentParser()
@@ -117,13 +116,56 @@ class Statistics():
 # modbus function 15 -> Force Multiple Coils
 # modbus function 16 -> Preset Multiple Registers
 
-def readHoldingRegister(dbg, address, stats):
-    pass
 
-def readInputRegister(dbg, address, stats):
-    pass
+def readHoldingRegister(device, address, stats, dbg):
+    modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
+    minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
+    v = False
+    if (dbg == True):
+        modbusH.debug = True
+        # print handler info
+        print modbusH
 
-# TODO: refactor this to not recreate the modbusH each time
+    try:
+        v = modbusH.read_register(address, 0, 3, False)
+        stats.goodReading(device, address, str(v))
+    except IOError, e:
+        v = False
+        stats.badReading(device, address)
+    time.sleep(args.cycleDelay)
+    return v
+
+
+def readInputRegister(device, address, stats, dbg):
+    modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
+    minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
+    v = False
+    if (dbg == True):
+        modbusH.debug = True
+        # print handler info
+        print modbusH
+
+    try:
+        v = modbusH.read_register(address, 0, 4, False)
+        stats.goodReading(device, address, str(v))
+    except IOError, e:
+        v = False
+        stats.badReading(device, address)
+    time.sleep(args.cycleDelay)
+    return v
+
+
+def allDevicesHoldingRegister(address, stats, dbg):
+    for dev in range (1, MAX_DEVICE + 1):
+        print "Polling device ", dev
+        readHoldingRegister(dev, address, stats, dbg)
+
+def allDevicesInputRegisters(address, stats, dbg):
+    for dev in range (1, MAX_DEVICE + 1):
+        print "Polling device ", dev
+        readInputRegister(dev, address, stats, dbg)
+
+
 def getModbusValues(dbg, address, stats):
         register = 300
 
@@ -160,21 +202,24 @@ def getModbusValues(dbg, address, stats):
                 time.sleep(args.cycleDelay)
         return
 
+
+
+
 statistics = Statistics()
 try:
-        if len(args.desc) > 0:
-            statistics.descLine(args.desc)
+    if len(args.desc) > 0:
+        statistics.descLine(args.desc)
 
-        cycle = 0
-        while args.cycles - cycle != 0:
-                cycle = cycle + 1
-                print "=============================="
-                print "Cycle #%d" % cycle
-                print "=============================="
-                getModbusValues(debug, addr, statistics)
-                print
-                print
-                time.sleep(args.cycleTimeout)
+    cycle = 0
+    while args.cycles - cycle != 0:
+            cycle += 1
+            print "=============================="
+            print "Cycle #%d" % cycle
+            print "=============================="
+            allDevicesHoldingRegister(399, statistics, DEBUG)
+            print
+            print
+            time.sleep(args.cycleTimeout)
 
 except KeyboardInterrupt:
         print
