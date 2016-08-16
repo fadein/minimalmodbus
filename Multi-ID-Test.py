@@ -185,13 +185,14 @@ def getModbusValues(dbg, address, stats):
                 try:
                     #Read Holding Register
                     # read_registers(register_addr, num_registers, functioncode=3)
-                    holR = modbusH.read_registers(address - 1, 1)
+                    holR = modbusH.read_registers(399, 1)
                     print ("Holding Register -> Slave ID: <%d>  Address : %d  "%(id, address ) + " Value(s) : " + ",".join(str(v) for v in holR ) )
                     time.sleep(args.cycleDelay)
 
                     #Read Input Register
-                    # read_registers(register_addr, num_registers, functioncode=3)
-                    inputR = modbusH.read_registers(register - 1, 1, 4)
+                    # read_registers(register_addr, num_registers, functioncode=4)
+                    # reg
+                    inputR = modbusH.read_registers(299, 1, 4)
                     print ("Input Register -> Slave ID: <%d>  Address : %d  "%(id, register ) + " Value(s) : " + ",".join(str(v) for v in inputR ) )
                     stats.goodReading(id, address, str(inputR))
                     time.sleep(args.cycleDelay)
@@ -228,6 +229,11 @@ try:
 
 except KeyboardInterrupt:
         print
+        print "Terminating program..."
+
+except IOError:
+        print
+        print "%s : %s : %s" % ('echoTime()', e , e.errno)
         print "Terminating program..."
 
 finally:
