@@ -1,10 +1,9 @@
-import minimalmodbus, time, serial, datetime, sys
+import minimalmodbus, time, serial, datetime, sys, csv
 from argparse import ArgumentParser
 
-MAX_ADDR = 4
+MAX_DEVICE = 4
 COMPORT = 'COM8'
-add = 400
-ADDR_BASE = 1
+addr = 400
 debug = False
 cycleDelay = .300
 
@@ -19,10 +18,14 @@ parser.add_argument('-t', '--cycle-timeout', dest='cycleTimeout', default=5.0, m
         help='How long to wait between cycles')
 parser.add_argument('-d', '--cycle-delay', dest='cycleDelay', default=0.3, metavar='N', type=float,
         help='How long to wait between cycles')
+parser.add_argument('-f', '--file', dest='file', default='modbus.csv', metavar='FILE', type=str,
+        help='Filename to store CSV output')
+parser.add_argument('-D', '--desc', dest='desc', default='', metavar='DESC', type=str,
+        help='Description of this test, noted within CSV file')
 args = parser.parse_args()
 
 COMPORT  = args.comport
-MAX_ADDR = args.numsensors
+MAX_DEVICE = args.numsensors
 
 minimalmodbus.BAUDRATE = 9600
 minimalmodbus.PARITY = 'N'
@@ -30,86 +33,80 @@ minimalmodbus.BYTESIZE = 8
 minimalmodbus.STOPBITS = 1
 minimalmodbus.TIMEOUT = 0.5 #500ms
 
-ZERO = datetime.timedelta(0)
-
-class UTC(datetime.tzinfo):
-
-    def utcoffset(self, dt):
-        return ZERO
-
-    def tzname(self, dt):
-        return "UTC"
-
-    def dst(self, dt):
-        return ZERO
 
 class Statistics():
-        def __init__(self, maxdev):
-            self.statistics = {}
+    class UTC(datetime.tzinfo):
+        ZERO = datetime.timedelta(0)
+        def utcoffset(self, dt):
+            return Statistics.UTC.ZERO
 
-            for i in range (1, maxdev + 1):
-                self.statistics[i] = {'total': 0, 'success': 0, 'failure': 0}
+        def tzname(self, dt):
+            return "UTC"
 
-        def getiter(self):
-            i = iter(sorted(self.statistics.iteritems()))
-            return i
+        def dst(self, dt):
+            return Statistics.UTC.ZERO
 
-        def __repr__(self):
-            string = ''
-            for j in self.getiter():
-                string = string + str(j) + "\n"
-            return string
+    def __init__(self, fileObj = sys.stdout):
+        self.eventLog = []
+        self.file = fileObj
+        self.total = 0
+        self.success = 0
+        self.failure = 0
+        self.utc = Statistics.UTC()
+        self.begin = datetime.datetime.now(self.utc)
 
-        def __getitem__(self, i):
-            return self.statistics[i]
+    def getiter(self):
+        i = iter(sorted(self.eventLog))
+        return i
 
-        def failure(self, i):
-            self.statistics[i]['total'] = self.statistics[i]['total'] + 1
-            self.statistics[i]['failure'] = self.statistics[i]['failure'] + 1
+    def __repr__(self):
+        string = ''
+        for j in self.getiter():
+            string = string + str(j) + "\n"
+        return string
 
-        def success(self, i):
-            self.statistics[i]['total'] = self.statistics[i]['total'] + 1
-            self.statistics[i]['success'] = self.statistics[i]['success'] + 1
+    def __getitem__(self, i):
+        return self.eventLog[i]
 
-def echoTime():
-        t = datetime.datetime.now(utc).strftime("%a %b %d %H:%M:%S %Z %Y")
-        return t
+    def logReading(self, device, register, value, desc):
+        record = {'when': datetime.datetime.now(self.utc).strftime("%a %b %d %H:%M:%S %Z %Y"),
+                'device': device,
+                'register': register,
+                'value': value,
+                'desc': desc}
+        self.eventLog.append(record)
+        self.total += 1
 
-def getModbusValues(dbg, address, ADDR_BASE, stats):
-        modbusVal = 0
-        register = 300
+    def badReading(self, device, register, desc=''):
+        self.logReading(device, register, False, desc)
+        self.failure += 1
 
-        for id in range (1, MAX_ADDR + 1):
-                print  "Polling device ",id
-                print  "-------------------"
-                modbusH = minimalmodbus.Instrument(COMPORT, id,mode='rtu')
-                minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
-                if (dbg == True):
-                        modbusH.debug = True
+    def goodReading(self, device, register, value, desc=''):
+        self.logReading(device, register, value, desc)
+        self.success += 1
 
-                        # print handler info
-                        print modbusH
+    def descLine(self, desc):
+        record = {'when'   : None,
+                'device'   : None,
+                'register' : None,
+                'value'    : None,
+                'desc'     : desc}
+        self.eventLog.append(record)
 
-                try:
-                        print(echoTime())
-                        holR=modbusH.read_registers(address - ADDR_BASE, 1)  # last parameter is # of registers.
-                        print ("Holding Register -> Slave ID: <%d>  Address : %d  "%(id, address ) + " Value(s) : " + ",".join(str(v) for v in holR ) )
-                        time.sleep(args.cycleDelay)
+    def writeCSV(self):
+        w = csv.DictWriter(self.file, [ 'when', 'device', 'register', 'value', 'desc', ])
+        w.writeheader()
+        for r in self.eventLog:
+            w.writerow(r)
 
-                        #Read Input Register
-                        print(echoTime())
-                        inputR=modbusH.read_registers(register - ADDR_BASE, 1, 4) # last parameter is # of registers.
-                        print ("Input Register -> Slave ID: <%d>  Address : %d  "%(id, register ) + " Value(s) : " + ",".join(str(v) for v in inputR ) )
-                        stats.success(id)
-                        time.sleep(args.cycleDelay)
+    def summarize(self):
+        """ Tally up the statistics """
+        self.descLine('Total readings: {}'.format(self.total))
+        self.descLine('Successful readings: {} ({:03.2f}%)'.format(self.success, (self.success * 100.0 / self.total)))
+        self.descLine('Failed readings: {} ({:03.2f}%)'.format(self.failure, (self.failure * 100.0 / self.total)))
+        self.descLine('Number of devices polled: {}'.format( len(set([x['device'] for x in self.eventLog if isinstance(x['device'], int)])) ))
+        self.writeCSV()
 
-                except IOError, e:
-                        print "%s : %s : %s" % (echoTime(), e , e.errno)
-                        stats.failure(id)
-
-                print
-                time.sleep(args.cycleDelay)
-        return
 
 # modbus function 1  -> Read Coil Status
 # modbus function 2  -> Read Input Status
@@ -120,17 +117,61 @@ def getModbusValues(dbg, address, ADDR_BASE, stats):
 # modbus function 15 -> Force Multiple Coils
 # modbus function 16 -> Preset Multiple Registers
 
+def readHoldingRegister(dbg, address, stats):
+    pass
 
-utc = UTC()
+def readInputRegister(dbg, address, stats):
+    pass
+
+# TODO: refactor this to not recreate the modbusH each time
+def getModbusValues(dbg, address, stats):
+        register = 300
+
+        for id in range (1, MAX_DEVICE + 1):
+                print  "Polling device ",id
+                print  "-------------------"
+                modbusH = minimalmodbus.Instrument(COMPORT, id,mode='rtu')
+                minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
+                if (dbg == True):
+                    modbusH.debug = True
+
+                    # print handler info
+                    print modbusH
+
+                try:
+                    #Read Holding Register
+                    # read_registers(register_addr, num_registers, functioncode=3)
+                    holR = modbusH.read_registers(address - 1, 1)
+                    print ("Holding Register -> Slave ID: <%d>  Address : %d  "%(id, address ) + " Value(s) : " + ",".join(str(v) for v in holR ) )
+                    time.sleep(args.cycleDelay)
+
+                    #Read Input Register
+                    # read_registers(register_addr, num_registers, functioncode=3)
+                    inputR = modbusH.read_registers(register - 1, 1, 4)
+                    print ("Input Register -> Slave ID: <%d>  Address : %d  "%(id, register ) + " Value(s) : " + ",".join(str(v) for v in inputR ) )
+                    stats.goodReading(id, address, str(inputR))
+                    time.sleep(args.cycleDelay)
+
+                except IOError, e:
+                    print "%s : %s : %s" % ('echoTime()', e , e.errno)
+                    stats.badReading(id, address)
+
+                print
+                time.sleep(args.cycleDelay)
+        return
+
+statistics = Statistics()
 try:
-        statistics = Statistics(MAX_ADDR)
+        if len(args.desc) > 0:
+            statistics.descLine(args.desc)
+
         cycle = 0
         while args.cycles - cycle != 0:
                 cycle = cycle + 1
                 print "=============================="
                 print "Cycle #%d" % cycle
                 print "=============================="
-                getModbusValues(debug, add, ADDR_BASE, statistics)
+                getModbusValues(debug, addr, statistics)
                 print
                 print
                 time.sleep(args.cycleTimeout)
@@ -143,4 +184,4 @@ finally:
         print "=================================================="
         print "                 Final statistics"
         print "=================================================="
-        print statistics
+        statistics.summarize()
