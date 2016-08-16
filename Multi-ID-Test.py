@@ -17,7 +17,7 @@ parser.add_argument('-t', '--cycle-timeout', dest='cycleTimeout', default=5.0, m
         help='How long to wait between cycles')
 parser.add_argument('-d', '--cycle-delay', dest='cycleDelay', default=0.3, metavar='N', type=float,
         help='How long to wait between cycles')
-parser.add_argument('-f', '--file', dest='file', default='modbus.csv', metavar='FILE', type=str,
+parser.add_argument('-f', '--file', dest='file', default='', metavar='FILE', type=str,
         help='Filename to store CSV output')
 parser.add_argument('-D', '--desc', dest='desc', default='', metavar='DESC', type=str,
         help='Description of this test, noted within CSV file')
@@ -205,9 +205,12 @@ def getModbusValues(dbg, address, stats):
         return
 
 
+statistics = None
+if args.file == '':
+    statistics = Statistics()
+else:
+    statistics = Statistics(open(args.file, 'w'))
 
-
-statistics = Statistics()
 try:
     if len(args.desc) > 0:
         statistics.descLine(args.desc)
