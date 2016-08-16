@@ -132,6 +132,7 @@ def readHoldingRegister(device, address, stats, dbg):
     except IOError, e:
         v = False
         stats.badReading(device, address)
+        print "\tBad read on device ", device
     time.sleep(args.cycleDelay)
     return v
 
@@ -151,6 +152,7 @@ def readInputRegister(device, address, stats, dbg):
     except IOError, e:
         v = False
         stats.badReading(device, address)
+        print "\tBad read on device ", device
     time.sleep(args.cycleDelay)
     return v
 
@@ -172,7 +174,7 @@ def getModbusValues(dbg, address, stats):
         for id in range (1, MAX_DEVICE + 1):
                 print  "Polling device ",id
                 print  "-------------------"
-                modbusH = minimalmodbus.Instrument(COMPORT, id,mode='rtu')
+                modbusH = minimalmodbus.Instrument(COMPORT, id, mode='rtu')
                 minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
                 if (dbg == True):
                     modbusH.debug = True
