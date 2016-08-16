@@ -63,6 +63,14 @@ class Statistics():
         def __getitem__(self, i):
             return self.statistics[i]
 
+        def failure(self, i):
+            self.statistics[i]['total'] = self.statistics[i]['total'] + 1
+            self.statistics[i]['failure'] = self.statistics[i]['failure'] + 1
+
+        def success(self, i):
+            self.statistics[i]['total'] = self.statistics[i]['total'] + 1
+            self.statistics[i]['success'] = self.statistics[i]['success'] + 1
+
 def echoTime():
         t = datetime.datetime.now(utc).strftime("%a %b %d %H:%M:%S %Z %Y")
         return t
@@ -83,7 +91,6 @@ def getModbusValues(dbg, address, ADDR_BASE, stats):
                         print modbusH
 
                 try:
-                        stats[id]['total'] = stats[id]['total'] + 1
                         print(echoTime())
                         holR=modbusH.read_registers(address - ADDR_BASE, 1)  # last parameter is # of registers.
                         print ("Holding Register -> Slave ID: <%d>  Address : %d  "%(id, address ) + " Value(s) : " + ",".join(str(v) for v in holR ) )
@@ -93,12 +100,12 @@ def getModbusValues(dbg, address, ADDR_BASE, stats):
                         print(echoTime())
                         inputR=modbusH.read_registers(register - ADDR_BASE, 1, 4) # last parameter is # of registers.
                         print ("Input Register -> Slave ID: <%d>  Address : %d  "%(id, register ) + " Value(s) : " + ",".join(str(v) for v in inputR ) )
-                        stats[id]['success'] = stats[id]['success'] + 1
+                        stats.success(id)
                         time.sleep(args.cycleDelay)
 
                 except IOError, e:
                         print "%s : %s : %s" % (echoTime(), e , e.errno)
-                        stats[id]['failure'] = stats[id]['failure'] + 1
+                        stats.failure(id)
 
                 print
                 time.sleep(args.cycleDelay)
