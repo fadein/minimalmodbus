@@ -131,7 +131,7 @@ def readHoldingRegister(device, address, stats, dbg):
         stats.goodReading(device, address, str(v))
     except IOError, e:
         v = False
-        stats.badReading(device, address)
+        stats.badReading(device, address, 'bad reading')
         print "\tBad read on device ", device
     time.sleep(args.cycleDelay)
     return v
@@ -151,7 +151,7 @@ def readInputRegister(device, address, stats, dbg):
         stats.goodReading(device, address, str(v))
     except IOError, e:
         v = False
-        stats.badReading(device, address)
+        stats.badReading(device, address, 'bad reading')
         print "\tBad read on device ", device
     time.sleep(args.cycleDelay)
     return v
@@ -210,7 +210,7 @@ statistics = None
 if args.file == '':
     statistics = Statistics()
 else:
-    statistics = Statistics(open(args.file, 'w'))
+    statistics = Statistics(open(args.file, 'wb'))
 
 try:
     if len(args.desc) > 0:
