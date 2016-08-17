@@ -4,19 +4,22 @@ from argparse import ArgumentParser
 MAX_DEVICE = 4
 COMPORT = 'COM8'
 DEBUG = False
-cycleDelay = .300
 
 parser = ArgumentParser()
 parser.add_argument("-c", "--comport", dest="comport", default="COM8", metavar="COM8", type=str,
         help="COM port the ModBus network is on")
+
 parser.add_argument("-n", "--numsensors", dest="numsensors", default=1, metavar="N", type=int,
         help="How many sensors to poll (i.e. maximum sensor address)")
 parser.add_argument('-y', '--cycles', dest='cycles', default=-1, metavar='N', type=int,
         help='How many times to poll each sensor before terminating')
-parser.add_argument('-t', '--cycle-timeout', dest='cycleTimeout', default=5.0, metavar='N', type=float,
+
+parser.add_argument('-a', '--intra-cycle-delay', dest='intraDelay', default=0.3, metavar='0.3', type=float,
+        help='How long to wait between polling devices within a cycle')
+
+parser.add_argument('-e', '--inter-cycle-delay', dest='interDelay', default=5.0, metavar='5.0', type=float,
         help='How long to wait between cycles')
-parser.add_argument('-d', '--cycle-delay', dest='cycleDelay', default=0.3, metavar='N', type=float,
-        help='How long to wait between cycles')
+
 parser.add_argument('-f', '--file', dest='file', default='', metavar='FILE', type=str,
         help='Filename to store CSV output')
 parser.add_argument('-D', '--desc', dest='desc', default='', metavar='DESC', type=str,
@@ -157,7 +160,7 @@ def readHoldingRegister(device, address, stats, dbg):
         v = False
         stats.badReading(device, address, 'bad reading')
         print "\tBad read on device ", device
-    time.sleep(args.cycleDelay)
+    time.sleep(args.intraDelay)
     return v
 
 
@@ -177,7 +180,7 @@ def readInputRegister(device, address, stats, dbg):
         v = False
         stats.badReading(device, address, 'bad reading')
         print "\tBad read on device ", device
-    time.sleep(args.cycleDelay)
+    time.sleep(args.intraDelay)
     return v
 
 
@@ -249,7 +252,7 @@ try:
             allDevicesInputRegisters(299, statistics, DEBUG)
             print
             print
-            time.sleep(args.cycleTimeout)
+            time.sleep(args.interDelay)
 
 except KeyboardInterrupt:
         print
