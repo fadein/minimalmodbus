@@ -196,41 +196,45 @@ def allDevicesInputRegisters(address, stats, dbg):
 
 
 def getModbusValues(dbg, address, stats):
-        register = 300
+    """DEPRECATED : the orginal code
+    reads from a Holding reg, followed by a read from an Input reg
+    """
 
-        for id in range (1, MAX_DEVICE + 1):
-                print  "Polling device ",id
-                print  "-------------------"
-                modbusH = minimalmodbus.Instrument(COMPORT, id, mode='rtu')
-                minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
-                if (dbg == True):
-                    modbusH.debug = True
+    register = 300
 
-                    # print handler info
-                    print modbusH
+    for id in range (1, MAX_DEVICE + 1):
+            print  "Polling device ",id
+            print  "-------------------"
+            modbusH = minimalmodbus.Instrument(COMPORT, id, mode='rtu')
+            minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
+            if (dbg == True):
+                modbusH.debug = True
 
-                try:
-                    #Read Holding Register
-                    # read_registers(register_addr, num_registers, functioncode=3)
-                    holR = modbusH.read_registers(399, 1)
-                    print ("Holding Register -> Slave ID: <%d>  Address : %d  "%(id, address ) + " Value(s) : " + ",".join(str(v) for v in holR ) )
-                    time.sleep(args.cycleDelay)
+                # print handler info
+                print modbusH
 
-                    #Read Input Register
-                    # read_registers(register_addr, num_registers, functioncode=4)
-                    # reg
-                    inputR = modbusH.read_registers(299, 1, 4)
-                    print ("Input Register -> Slave ID: <%d>  Address : %d  "%(id, register ) + " Value(s) : " + ",".join(str(v) for v in inputR ) )
-                    stats.goodReading(id, address, str(inputR))
-                    time.sleep(args.cycleDelay)
+            try:
+                #Read Holding Register
+                # read_registers(register_addr, num_registers, functioncode=3)
+                holR = modbusH.read_registers(399, 1)
+                print ("Holding Register -> Slave ID: <%d>  Address : %d  "%(id, address ) + " Value(s) : " + ",".join(str(v) for v in holR ) )
+                time.sleep(args.intraDelay)
 
-                except IOError, e:
-                    print "%s : %s : %s" % ('echoTime()', e , e.errno)
-                    stats.badReading(id, address)
+                #Read Input Register
+                # read_registers(register_addr, num_registers, functioncode=4)
+                # reg
+                inputR = modbusH.read_registers(299, 1, 4)
+                print ("Input Register -> Slave ID: <%d>  Address : %d  "%(id, register ) + " Value(s) : " + ",".join(str(v) for v in inputR ) )
+                stats.goodReading(id, address, str(inputR))
+                time.sleep(args.intraDelay)
 
-                print
-                time.sleep(args.cycleDelay)
-        return
+            except IOError, e:
+                print "%s : %s : %s" % ('echoTime()', e , e.errno)
+                stats.badReading(id, address)
+
+            print
+            time.sleep(args.interDelay)
+    return
 
 
 statistics = None
