@@ -48,9 +48,8 @@ class Statistics():
     def __init__(self, fileObj = sys.stdout):
         self.eventLog = []
         self.file = fileObj
-        self.total = 0
-        self.success = 0
-        self.failure = 0
+        self.overall = {'total': 0, 'success': 0, 'failure': 0}
+        self.by_device = {}
         self.utc = Statistics.UTC()
         self.begin = datetime.datetime.now(self.utc)
 
@@ -74,15 +73,26 @@ class Statistics():
                 'value': value,
                 'desc': desc}
         self.eventLog.append(record)
-        self.total += 1
+        self.overall['total'] += 1
 
     def badReading(self, device, register, desc=''):
         self.logReading(device, register, False, desc)
-        self.failure += 1
+        self.overall['failure'] += 1
+        if (self.by_device.has_key(device)):
+            self.by_device[device]['total'] += 1
+            self.by_device[device]['failure'] += 1
+        else:
+            self.by_device[device] = {'total': 1, 'success': 0, 'failure': 1}
+
 
     def goodReading(self, device, register, value, desc=''):
         self.logReading(device, register, value, desc)
-        self.success += 1
+        self.overall['success'] += 1
+        if (self.by_device.has_key(device)):
+            self.by_device[device]['total'] += 1
+            self.by_device[device]['success'] += 1
+        else:
+            self.by_device[device] = {'total': 1, 'success': 1, 'failure': 0}
 
     def descLine(self, desc):
         record = {'when'   : None,
@@ -100,10 +110,24 @@ class Statistics():
 
     def summarize(self):
         """ Tally up the statistics """
-        self.descLine('Total readings: {}'.format(self.total))
-        self.descLine('Successful readings: {} ({:03.2f}%)'.format(self.success, (self.success * 100.0 / self.total)))
-        self.descLine('Failed readings: {} ({:03.2f}%)'.format(self.failure, (self.failure * 100.0 / self.total)))
-        self.descLine('Number of devices polled: {}'.format( len(set([x['device'] for x in self.eventLog if isinstance(x['device'], int)])) ))
+        for fact in ('Total readings: {}'.format(self.overall['total']),
+                'Successful readings: {} ({:03.2f}%)'.format(self.overall['success'], (self.overall['success'] * 100.0 / self.overall['total'])),
+                'Failed readings: {} ({:03.2f}%)'.format(self.overall['failure'], (self.overall['failure'] * 100.0 / self.overall['total'])),
+                'Number of devices polled: {}'.format( len(set([x['device'] for x in self.eventLog if isinstance(x['device'], int)])) ),
+                '',
+                'Stats by Modbus address:',
+                '------------------------'):
+            print fact
+            self.descLine(fact)
+
+        for addr in self.by_device.iteritems():
+            for fact in ('Dev #{}: Total readings: {}'.format(addr[0], addr[1]['total']),
+                    'Dev #{}: Successful readings: {} ({:03.2f}%)'.format(addr[0], addr[1]['success'], addr[1]['success'] * 100.0 / addr[1]['total']),
+                    'Dev #{}: Failed readings: {} ({:03.2f}%)'.format(addr[0], addr[1]['failure'], addr[1]['failure'] * 100.0 / addr[1]['total']),
+                    ''):
+                print fact
+                self.descLine(fact)
+
         self.writeCSV()
 
 
@@ -222,7 +246,7 @@ try:
             print "=============================="
             print "Cycle #%d" % cycle
             print "=============================="
-            allDevicesHoldingRegister(399, statistics, DEBUG)
+            allDevicesInputRegisters(299, statistics, DEBUG)
             print
             print
             time.sleep(args.cycleTimeout)
