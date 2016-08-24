@@ -33,7 +33,7 @@ minimalmodbus.BAUDRATE = 9600
 minimalmodbus.PARITY = 'N'
 minimalmodbus.BYTESIZE = 8
 minimalmodbus.STOPBITS = 1
-minimalmodbus.TIMEOUT = 0.5 #500ms
+minimalmodbus.TIMEOUT = 1.5 #500ms
 
 
 class Statistics():
@@ -146,7 +146,6 @@ class Statistics():
 
 def readHoldingRegister(device, address, stats, dbg):
     modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
-    minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
     v = False
     if (dbg == True):
         modbusH.debug = True
@@ -166,7 +165,6 @@ def readHoldingRegister(device, address, stats, dbg):
 
 def readInputRegister(device, address, stats, dbg):
     modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
-    minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
     v = False
     if (dbg == True):
         modbusH.debug = True
@@ -206,7 +204,6 @@ def getModbusValues(dbg, address, stats):
             print  "Polling device ",id
             print  "-------------------"
             modbusH = minimalmodbus.Instrument(COMPORT, id, mode='rtu')
-            minimalmodbus.CLOSE_PORT_AFTER_EACH_CALL = True
             if (dbg == True):
                 modbusH.debug = True
 
