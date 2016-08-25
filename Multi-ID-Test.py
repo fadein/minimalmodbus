@@ -131,7 +131,8 @@ class Statistics():
                 print fact
                 self.descLine(fact)
 
-        self.writeCSV()
+        if self.file != sys.stdout:
+            self.writeCSV()
 
 
 # modbus function 1  -> Read Coil Status
