@@ -1,7 +1,7 @@
+#!/usr/bin/python
 import minimalmodbus, time, serial, datetime, sys, csv
 from argparse import ArgumentParser
 
-MAX_DEVICE = 4
 COMPORT = 'COM8'
 DEBUG = False
 
@@ -9,8 +9,9 @@ parser = ArgumentParser()
 parser.add_argument("-c", "--comport", dest="comport", default="COM8", metavar="COM8", type=str,
         help="COM port the ModBus network is on")
 
-parser.add_argument("-n", "--numsensors", dest="numsensors", default=1, metavar="N", type=int,
-        help="How many sensors to poll (i.e. maximum sensor address)")
+parser.add_argument("addrs", nargs="*", type=int,
+        help="addresses of sensors in network")
+
 parser.add_argument('-y', '--cycles', dest='cycles', default=-1, metavar='N', type=int,
         help='How many times to poll each sensor before terminating')
 
@@ -27,7 +28,8 @@ parser.add_argument('-D', '--desc', dest='desc', default='', metavar='DESC', typ
 args = parser.parse_args()
 
 COMPORT  = args.comport
-MAX_DEVICE = args.numsensors
+
+print "these sensors are specified: " + str(args.addrs)
 
 minimalmodbus.BAUDRATE = 9600
 minimalmodbus.PARITY = 'N'
@@ -183,12 +185,12 @@ def readInputRegister(device, address, stats, dbg):
 
 
 def allDevicesHoldingRegister(address, stats, dbg):
-    for dev in range (1, MAX_DEVICE + 1):
+    for dev in args.addrs:
         print "Polling device ", dev
         readHoldingRegister(dev, address, stats, dbg)
 
 def allDevicesInputRegisters(address, stats, dbg):
-    for dev in range (1, MAX_DEVICE + 1):
+    for dev in args.addrs:
         print "Polling device ", dev
         readInputRegister(dev, address, stats, dbg)
 
@@ -200,7 +202,7 @@ def getModbusValues(dbg, address, stats):
 
     register = 300
 
-    for id in range (1, MAX_DEVICE + 1):
+    for id in args.addrs:
             print  "Polling device ",id
             print  "-------------------"
             modbusH = minimalmodbus.Instrument(COMPORT, id, mode='rtu')
