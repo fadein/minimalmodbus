@@ -228,7 +228,7 @@ def getModbusValues(dbg, address, stats):
                 time.sleep(args.intraDelay)
 
             except IOError, e:
-                print "%s : %s : %s" % ('echoTime()', e , e.errno)
+                print "%s : %s : %s" % ('getModbusValues()', e , e.errno)
                 stats.badReading(id, address)
 
             print
@@ -261,9 +261,9 @@ except KeyboardInterrupt:
         print
         print "Terminating program..."
 
-except IOError:
+except IOError , e:
         print
-        print "%s : %s : %s" % ('echoTime()', e , e.errno)
+        print "IOError: %s (errno: %s)" % (e , e.errno)
         print "Terminating program..."
 
 finally:
