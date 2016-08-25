@@ -2,7 +2,6 @@
 import minimalmodbus, time, serial, datetime, sys, csv
 from argparse import ArgumentParser
 
-COMPORT = 'COM8'
 DEBUG = False
 
 parser = ArgumentParser()
@@ -35,7 +34,7 @@ minimalmodbus.BAUDRATE = 9600
 minimalmodbus.PARITY = 'N'
 minimalmodbus.BYTESIZE = 8
 minimalmodbus.STOPBITS = 1
-minimalmodbus.TIMEOUT = 1.5 #500ms
+minimalmodbus.TIMEOUT = 0.5 #500ms
 
 
 class Statistics():
@@ -174,14 +173,30 @@ def readInputRegister(device, address, stats, dbg):
         # print handler info
         print modbusH
 
+    dinduNuffin = False
     try:
-        v = modbusH.read_register(address, 0, 4, False)
+        #v = modbusH.read_register(address, 0, 4, False)
+        v = modbusH.read_registers(address, 6, 4)
         stats.goodReading(device, address, str(v))
     except IOError, e:
+        dinduNuffin = True
         v = False
-        stats.badReading(device, address, 'bad reading')
-        print "\tBad read on device ", device
+        #stats.badReading(device, address, 'bad reading')
+        print "\tBad read on device ", device, " trying again..."
+        time.sleep(args.intraDelay)
+
+    if dinduNuffin:
+        try:
+            #v = modbusH.read_register(address, 0, 4, False)
+            v = modbusH.read_registers(address, 6, 4)
+            stats.goodReading(device, address, str(v))
+        except IOError, e:
+            v = False
+            stats.badReading(device, address, 'bad reading')
+            print "\tBad read on device ", device
+
     time.sleep(args.intraDelay)
+
     return v
 
 
@@ -253,7 +268,11 @@ try:
             print "=============================="
             print "Cycle #%d" % cycle
             print "=============================="
+
             allDevicesInputRegisters(299, statistics, DEBUG)
+            #allDevicesInputRegisters(300, statistics, DEBUG) # pressure
+            #allDevicesInputRegisters(302, statistics, DEBUG) # temperature
+
             print
             print
             time.sleep(args.interDelay)
@@ -266,6 +285,9 @@ except IOError , e:
         print
         print "IOError: %s (errno: %s)" % (e , e.errno)
         print "Terminating program..."
+
+except Exception, e:
+        print "Generic exception: %e (errno: %s)" % (e, e.errno)
 
 finally:
         print "=================================================="
