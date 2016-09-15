@@ -114,10 +114,11 @@ class Statistics():
 
     def summarize(self):
         """ Tally up the statistics """
-        for fact in ('Total readings: {}'.format(self.overall['total']),
-                'Successful readings: {} ({:03.2f}%)'.format(self.overall['success'], (self.overall['success'] * 100.0 / self.overall['total'])),
-                'Failed readings: {} ({:03.2f}%)'.format(self.overall['failure'], (self.overall['failure'] * 100.0 / self.overall['total'])),
-                'Number of devices polled: {}'.format( len(set([x['device'] for x in self.eventLog if isinstance(x['device'], int)])) ),
+        for fact in (
+                'Total readings      {}'.format(self.overall['total']),
+                'Successful readings {} ({:03.2f}%)'.format(self.overall['success'], (self.overall['success'] * 100.0 / self.overall['total'])),
+                'Failed readings     {} ({:03.2f}%)'.format(self.overall['failure'], (self.overall['failure'] * 100.0 / self.overall['total'])),
+                'Number of devices   {}'.format( len(set([x['device'] for x in self.eventLog if isinstance(x['device'], int)])) ),
                 '',
                 'Stats by Modbus address:',
                 '------------------------'):
@@ -125,9 +126,10 @@ class Statistics():
             self.descLine(fact)
 
         for addr in self.by_device.iteritems():
-            for fact in ('Dev #{}: Total readings: {}'.format(addr[0], addr[1]['total']),
-                    'Dev #{}: Successful readings: {} ({:03.2f}%)'.format(addr[0], addr[1]['success'], addr[1]['success'] * 100.0 / addr[1]['total']),
-                    'Dev #{}: Failed readings: {} ({:03.2f}%)'.format(addr[0], addr[1]['failure'], addr[1]['failure'] * 100.0 / addr[1]['total']),
+            for fact in (
+                    'Dev #{:<3d} Total readings:      {}'.format(addr[0], addr[1]['total']),
+                    'Dev #{:<3d} Successful readings: {} ({:03.2f}%)'.format(addr[0], addr[1]['success'], addr[1]['success'] * 100.0 / addr[1]['total']),
+                    'Dev #{:<3d} Failed readings:     {} ({:03.2f}%)'.format(addr[0], addr[1]['failure'], addr[1]['failure'] * 100.0 / addr[1]['total']),
                     ''):
                 print fact
                 self.descLine(fact)
