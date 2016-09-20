@@ -159,31 +159,7 @@ class Statistics():
 # modbus function 15 -> Force Multiple Coils
 # modbus function 16 -> Preset Multiple Registers
 
-
-def readHoldingRegister(device, address, stats, dbg):
-    modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
-    v = False
-    if (dbg == True):
-        modbusH.debug = True
-        # print handler info
-        print modbusH
-
-    try:
-        v = modbusH.read_register(address, 0, 3, False)
-        stats.goodReading(device, address, str(v))
-    except IOError, e:
-        v = False
-        stats.badReading(device, address, 'bad reading')
-        print "\tBad read on device ", device
-    except ValueError, ve:
-        v = False
-        stats.badReading(device, address, 'bad reading')
-        print "\tValueError: ", ve.message
-    time.sleep(args.intraDelay)
-    return v
-
-
-def readInputRegister(device, address, stats, dbg):
+def readRegister(device, address, stats, dbg, function):
     modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
     v = False
     if (dbg == True):
@@ -191,33 +167,39 @@ def readInputRegister(device, address, stats, dbg):
         print modbusH
 
     try:
-        v = modbusH.read_register(address, 0, 4, False)
+        v = modbusH.read_register(address, 0, function, False)
         stats.goodReading(device, address, str(v))
     except IOError, ioe:
         v = False
-        print "\t[IOError: ", ioe.message, "] Bad read on device ", device, " trying again..."
+        print "\t[IOError]", ioe.message, "\ttrying again..."
         time.sleep(args.intraDelay)
     except ValueError, ve:
         v = False
-        print "\t[ValueError: ", ve.message, "] Bad read on device ", device, " trying again..."
+        print "\t[ValueError]", ve.message, "\ttrying again..."
         time.sleep(args.intraDelay)
 
     if v == False:
         try:
-            v = modbusH.read_register(address, 0, 4, False)
+            v = modbusH.read_register(address, 0, function, False)
             stats.goodReading(device, address, str(v))
         except IOError, ioe:
             v = False
-            print "\t[IOError: ", ioe.message, "] Bad read on device ", device
+            print "\t[IOError]", ioe.message
             stats.badReading(device, address, '[IOError] bad reading')
         except ValueError, ve:
             v = False
-            print "\t[ValueError: ", ve.message, "] Bad read on device ", device
+            print "\t[ValueError]", ve.message
             stats.badReading(device, address, '[ValueError] bad reading')
 
     time.sleep(args.intraDelay)
-
     return v
+
+def readHoldingRegister(device, address, stats, dbg):
+    return readRegister(device, address, stats, dbg, 3)
+
+
+def readInputRegister(device, address, stats, dbg):
+    return readRegister(device, address, stats, dbg, 4)
 
 
 def readInputRegisters(device, address, stats, dbg):
@@ -232,11 +214,11 @@ def readInputRegisters(device, address, stats, dbg):
         stats.goodReading(device, address, str(v))
     except IOError, ioe:
         v = False
-        print "\t[IOError: ", ioe.message, "] Bad read on device ", device, " trying again..."
+        print "\t[IOError: ", ioe.message, "\ttrying again..."
         time.sleep(args.intraDelay)
     except ValueError, ve:
         v = False
-        print "\t[ValueError: ", ve.message, "] Bad read on device ", device, " trying again..."
+        print "\t[ValueError: ", ve.message, "\ttrying again..."
         time.sleep(args.intraDelay)
 
     if v == False:
@@ -245,15 +227,14 @@ def readInputRegisters(device, address, stats, dbg):
             stats.goodReading(device, address, str(v))
         except IOError, ioe:
             v = False
-            print "\t[IOError: ", ioe.message, "] Bad read on device ", device
+            print "\t[IOError]", ioe.message
             stats.badReading(device, address, '[IOError] bad reading')
         except ValueError, ve:
             v = False
-            print "\t[ValueError: ", ve.message, "] Bad read on device ", device
+            print "\t[ValueError]", ve.message
             stats.badReading(device, address, '[ValueError] bad reading')
 
     time.sleep(args.intraDelay)
-
     return v
 
 
