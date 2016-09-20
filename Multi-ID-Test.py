@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from __future__ import print_function
 import minimalmodbus, time, serial, datetime, sys, csv
 from argparse import ArgumentParser
 
@@ -42,9 +43,9 @@ else:
     plural = ' '
 
 if args.read_multi:
-    print "Reading a block of registers from ModBus address" + plural + str(args.addrs)
+    print("Reading a block of registers from ModBus address" + plural + str(args.addrs))
 else:
-    print "Reading a single register from ModBus address" + plural + str(args.addrs)
+    print("Reading a single register from ModBus address" + plural + str(args.addrs))
 
 minimalmodbus.BAUDRATE = 9600
 minimalmodbus.PARITY = 'N'
@@ -138,7 +139,7 @@ class Statistics():
                 '',
                 'Stats by Modbus address:',
                 '------------------------'):
-            print fact
+            print(fact)
             self.descLine(fact)
 
         for addr in self.by_device.iteritems():
@@ -147,7 +148,7 @@ class Statistics():
                     'Dev #{:<3d} Successful readings: {} ({:03.2f}%)'.format(addr[0], addr[1]['success'], addr[1]['success'] * 100.0 / addr[1]['total']),
                     'Dev #{:<3d} Failed readings:     {} ({:03.2f}%)'.format(addr[0], addr[1]['failure'], addr[1]['failure'] * 100.0 / addr[1]['total']),
                     ''):
-                print fact
+                print(fact)
                 self.descLine(fact)
 
         if self.file != sys.stdout:
@@ -169,7 +170,7 @@ def readRegister(device, address, stats, dbg, function):
 
     if (dbg == True):
         modbusH.debug = True
-        print modbusH
+        print(modbusH)
 
     try:
         v = modbusH.read_register(address, 0, function, False)
@@ -177,32 +178,34 @@ def readRegister(device, address, stats, dbg, function):
         failed = False
     except IOError, ioe:
         failed = True
-        print "\t[IOError]", ioe.message, "\ttrying again..."
+        print("\t[IOError]", ioe.message, "\ttrying again...")
         time.sleep(args.intraDelay)
     except ValueError, ve:
         failed = True
-        print "\t[IOError]", ioe.message, "\ttrying again..."
-        print "\t[ValueError]", ve.message, "\ttrying again..."
+        print("\t[IOError]", ioe.message, "\ttrying again...")
+        print("\t[ValueError]", ve.message, "\ttrying again...")
         time.sleep(args.intraDelay)
 
-    print
-    print "<<< failed is ", failed, " >>>"
-    print
 
     if failed:
+        failed = False
         try:
             time.sleep(args.intraDelay)
             v = modbusH.read_register(address, 0, function, False)
             stats.goodReading(device, address, str(v))
         except IOError, ioe:
+            failed = True
             v = None
-            print "\t[IOError]", ioe.message
+            print("\t[IOError]", ioe.message)
             stats.badReading(device, address, '[IOError] bad reading')
         except ValueError, ve:
+            failed = True
             v = None
-            print "\t[ValueError]", ve.message
+            print("\t[ValueError]", ve.message)
             stats.badReading(device, address, '[ValueError] bad reading')
 
+    if not failed:
+        print(' ... OK')
     time.sleep(args.intraDelay)
     return v
 
@@ -220,7 +223,7 @@ def readInputRegisters(device, address, stats, dbg):
 
     if (dbg == True):
         modbusH.debug = True
-        print modbusH
+        print(modbusH)
 
     try:
         v = modbusH.read_registers(address, 6, 4)
@@ -228,27 +231,32 @@ def readInputRegisters(device, address, stats, dbg):
         failed = False
     except IOError, ioe:
         failed = True
-        print "\t[IOError]", ioe.message, "\ttrying again..."
+        print("\t[IOError]", ioe.message, "\ttrying again...")
         time.sleep(args.intraDelay)
     except ValueError, ve:
         failed = True
-        print "\t[ValueError]", ve.message, "\ttrying again..."
+        print("\t[ValueError]", ve.message, "\ttrying again...")
         time.sleep(args.intraDelay)
 
     if failed:
+        failed = False
         try:
             time.sleep(args.intraDelay)
             v = modbusH.read_registers(address, 6, 4)
             stats.goodReading(device, address, str(v))
         except IOError, ioe:
+            failed = True
             v = None
-            print "\t[IOError]", ioe.message
+            print("\t[IOError]", ioe.message)
             stats.badReading(device, address, '[IOError] bad reading')
         except ValueError, ve:
+            failed = True
             v = None
-            print "\t[ValueError]", ve.message
+            print("\t[ValueError]", ve.message)
             stats.badReading(device, address, '[ValueError] bad reading')
 
+    if not failed:
+        print(' ... OK')
     time.sleep(args.intraDelay)
     return v
 
@@ -256,58 +264,18 @@ def readInputRegisters(device, address, stats, dbg):
 
 def allDevicesHoldingRegister(address, stats, dbg):
     for dev in args.addrs:
-        print "Polling device ", dev
+        print("Polling device ", dev, end='')
         readHoldingRegister(dev, address, stats, dbg)
 
 def allDevicesInputRegister(address, stats, dbg):
     for dev in args.addrs:
-        print "Polling device ", dev
+        print("Polling device", dev, end='')
         readInputRegister(dev, address, stats, dbg)
 
 def allDevicesInputRegisters(address, stats, dbg):
     for dev in args.addrs:
-        print "Polling device ", dev
+        print("Polling device ", dev, end='')
         readInputRegisters(dev, address, stats, dbg)
-
-def getModbusValues(dbg, address, stats):
-    """DEPRECATED : the orginal code
-    reads from a Holding reg, followed by a read from an Input reg
-    """
-
-    register = 300
-
-    for id in args.addrs:
-            print  "Polling device ",id
-            print  "-------------------"
-            modbusH = minimalmodbus.Instrument(COMPORT, id, mode='rtu')
-            if (dbg == True):
-                modbusH.debug = True
-
-                # print handler info
-                print modbusH
-
-            try:
-                #Read Holding Register
-                # read_registers(register_addr, num_registers, functioncode=3)
-                holR = modbusH.read_registers(399, 1)
-                print ("Holding Register -> Slave ID: <%d>  Address : %d  "%(id, address ) + " Value(s) : " + ",".join(str(v) for v in holR ) )
-                time.sleep(args.intraDelay)
-
-                #Read Input Register
-                # read_registers(register_addr, num_registers, functioncode=4)
-                # reg
-                inputR = modbusH.read_registers(299, 1, 4)
-                print ("Input Register -> Slave ID: <%d>  Address : %d  "%(id, register ) + " Value(s) : " + ",".join(str(v) for v in inputR ) )
-                stats.goodReading(id, address, str(inputR))
-                time.sleep(args.intraDelay)
-
-            except IOError, e:
-                print "[IOError] %s : %s : %s" % ('getModbusValues()', e , e.message)
-                stats.badReading(id, address)
-
-            print
-            time.sleep(args.interDelay)
-    return
 
 
 statistics = None
@@ -323,9 +291,9 @@ try:
     cycle = 0
     while args.cycles - cycle != 0:
             cycle += 1
-            print "=============================="
-            print "Cycle #%d" % cycle
-            print "=============================="
+            print("==============================")
+            print("Cycle #%d" % cycle)
+            print("==============================")
 
             if args.read_multi:
                 allDevicesInputRegisters(299, statistics, DEBUG)
@@ -334,24 +302,24 @@ try:
             else:
                 allDevicesInputRegister(299, statistics, DEBUG)
 
-            print
-            print
+            print()
+            print()
             time.sleep(args.interDelay)
 
 except KeyboardInterrupt:
-        print
-        print "Terminating program..."
+        print()
+        print("Terminating program...")
 
 except IOError , e:
-        print
-        print "IOError: %s (errno: %s)" % (e , e.errno)
-        print "Terminating program..."
+        print()
+        print("IOError: %s (errno: %s)" % (e , e.errno))
+        print("Terminating program...")
 
 except Exception, e:
-        print "Generic exception: %e (errno: %s)" % (e, e.errno)
+        print("Generic exception: %e (errno: %s)" % (e, e.errno))
 
 finally:
-        print "=================================================="
-        print "                 Final statistics"
-        print "=================================================="
+        print("==================================================")
+        print("                 Final statistics")
+        print("==================================================")
         statistics.summarize()
