@@ -20,6 +20,9 @@ parser.add_argument('-a', '--intra-cycle-delay', dest='intraDelay', default=0.3,
 parser.add_argument('-e', '--inter-cycle-delay', dest='interDelay', default=5.0, metavar='5.0', type=float,
         help='How long to wait between cycles')
 
+parser.add_argument('-m', '--multi', dest='read_multi', action='store_true',
+        help='Read a block of registers at once?')
+
 parser.add_argument('-f', '--file', dest='file', default='', metavar='FILE', type=str,
         help='Filename to store CSV output')
 parser.add_argument('-D', '--desc', dest='desc', default='', metavar='DESC', type=str,
@@ -28,7 +31,16 @@ args = parser.parse_args()
 
 COMPORT  = args.comport
 
-print "these sensors are specified: " + str(args.addrs)
+
+if len(args.addrs) > 1:
+    plural = 'es '
+else:
+    plural = ' '
+
+if args.read_multi:
+    print "Reading a block of registers from ModBus address" + plural + str(args.addrs)
+else:
+    print "Reading a single register from ModBus address" + plural + str(args.addrs)
 
 minimalmodbus.BAUDRATE = 9600
 minimalmodbus.PARITY = 'N'
@@ -163,6 +175,10 @@ def readHoldingRegister(device, address, stats, dbg):
         v = False
         stats.badReading(device, address, 'bad reading')
         print "\tBad read on device ", device
+    except ValueError, ve:
+        v = False
+        stats.badReading(device, address, 'bad reading')
+        print "\tValueError: ", ve.message
     time.sleep(args.intraDelay)
     return v
 
@@ -172,34 +188,74 @@ def readInputRegister(device, address, stats, dbg):
     v = False
     if (dbg == True):
         modbusH.debug = True
-        # print handler info
         print modbusH
 
-    dinduNuffin = False
     try:
-        #v = modbusH.read_register(address, 0, 4, False)
-        v = modbusH.read_registers(address, 6, 4)
+        v = modbusH.read_register(address, 0, 4, False)
         stats.goodReading(device, address, str(v))
-    except IOError, e:
-        dinduNuffin = True
+    except IOError, ioe:
         v = False
-        #stats.badReading(device, address, 'bad reading')
-        print "\tBad read on device ", device, " trying again..."
+        print "\t[IOError: ", ioe.message, "] Bad read on device ", device, " trying again..."
+        time.sleep(args.intraDelay)
+    except ValueError, ve:
+        v = False
+        print "\t[ValueError: ", ve.message, "] Bad read on device ", device, " trying again..."
         time.sleep(args.intraDelay)
 
-    if dinduNuffin:
+    if v == False:
         try:
-            #v = modbusH.read_register(address, 0, 4, False)
-            v = modbusH.read_registers(address, 6, 4)
+            v = modbusH.read_register(address, 0, 4, False)
             stats.goodReading(device, address, str(v))
-        except IOError, e:
+        except IOError, ioe:
             v = False
-            stats.badReading(device, address, 'bad reading')
-            print "\tBad read on device ", device
+            print "\t[IOError: ", ioe.message, "] Bad read on device ", device
+            stats.badReading(device, address, '[IOError] bad reading')
+        except ValueError, ve:
+            v = False
+            print "\t[ValueError: ", ve.message, "] Bad read on device ", device
+            stats.badReading(device, address, '[ValueError] bad reading')
 
     time.sleep(args.intraDelay)
 
     return v
+
+
+def readInputRegisters(device, address, stats, dbg):
+    modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
+    v = False
+    if (dbg == True):
+        modbusH.debug = True
+        print modbusH
+
+    try:
+        v = modbusH.read_registers(address, 6, 4)
+        stats.goodReading(device, address, str(v))
+    except IOError, ioe:
+        v = False
+        print "\t[IOError: ", ioe.message, "] Bad read on device ", device, " trying again..."
+        time.sleep(args.intraDelay)
+    except ValueError, ve:
+        v = False
+        print "\t[ValueError: ", ve.message, "] Bad read on device ", device, " trying again..."
+        time.sleep(args.intraDelay)
+
+    if v == False:
+        try:
+            v = modbusH.read_registers(address, 6, 4)
+            stats.goodReading(device, address, str(v))
+        except IOError, ioe:
+            v = False
+            print "\t[IOError: ", ioe.message, "] Bad read on device ", device
+            stats.badReading(device, address, '[IOError] bad reading')
+        except ValueError, ve:
+            v = False
+            print "\t[ValueError: ", ve.message, "] Bad read on device ", device
+            stats.badReading(device, address, '[ValueError] bad reading')
+
+    time.sleep(args.intraDelay)
+
+    return v
+
 
 
 def allDevicesHoldingRegister(address, stats, dbg):
@@ -207,11 +263,15 @@ def allDevicesHoldingRegister(address, stats, dbg):
         print "Polling device ", dev
         readHoldingRegister(dev, address, stats, dbg)
 
-def allDevicesInputRegisters(address, stats, dbg):
+def allDevicesInputRegister(address, stats, dbg):
     for dev in args.addrs:
         print "Polling device ", dev
         readInputRegister(dev, address, stats, dbg)
 
+def allDevicesInputRegisters(address, stats, dbg):
+    for dev in args.addrs:
+        print "Polling device ", dev
+        readInputRegisters(dev, address, stats, dbg)
 
 def getModbusValues(dbg, address, stats):
     """DEPRECATED : the orginal code
@@ -271,9 +331,12 @@ try:
             print "Cycle #%d" % cycle
             print "=============================="
 
-            allDevicesInputRegisters(299, statistics, DEBUG)
-            #allDevicesInputRegisters(300, statistics, DEBUG) # pressure
-            #allDevicesInputRegisters(302, statistics, DEBUG) # temperature
+            if args.read_multi:
+                allDevicesInputRegisters(299, statistics, DEBUG)
+                #allDevicesInputRegisters(300, statistics, DEBUG) # pressure
+                #allDevicesInputRegisters(302, statistics, DEBUG) # temperature
+            else:
+                allDevicesInputRegister(299, statistics, DEBUG)
 
             print
             print
