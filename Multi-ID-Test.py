@@ -182,7 +182,6 @@ def readRegister(device, address, stats, dbg, function):
         time.sleep(args.intraDelay)
     except ValueError, ve:
         failed = True
-        print("\t[IOError]", ioe.message, "\ttrying again...")
         print("\t[ValueError]", ve.message, "\ttrying again...")
         time.sleep(args.intraDelay)
 
@@ -312,11 +311,11 @@ except KeyboardInterrupt:
 
 except IOError , e:
         print()
-        print("IOError: %s (errno: %s)" % (e , e.errno))
+        print("IOError: %s %s (errno: %s)" % (e, e.message, e.errno))
         print("Terminating program...")
 
 except Exception, e:
-        print("Generic exception: %e (errno: %s)" % (e, e.errno))
+        print("[Generic exception] %s: %s" % (e, e.message))
 
 finally:
         print("==================================================")
