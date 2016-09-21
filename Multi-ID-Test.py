@@ -20,7 +20,7 @@ parser.add_argument('-a', '--intra-cycle-delay', dest='intraDelay', default=0.3,
 parser.add_argument('-e', '--inter-cycle-delay', dest='interDelay', default=5.0, metavar='5.0', type=float,
         help='How long to wait between cycles')
 
-parser.add_argument('-m', '--multi', dest='read_multi', action='store_true',
+parser.add_argument('-m', '--multi', dest='read_multi', default=1, metavar='N', type=int,
         help='Read a block of registers at once?')
 
 parser.add_argument('-f', '--file', dest='file', default='', metavar='FILE', type=str,
@@ -42,8 +42,8 @@ if len(args.addrs) > 1:
 else:
     plural = ' '
 
-if args.read_multi:
-    print("Reading a block of registers from ModBus address" + plural + str(args.addrs))
+if args.read_multi <> 1:
+    print("Reading a block of", args.read_multi, "registers from ModBus address" + plural + str(args.addrs))
 else:
     print("Reading a single register from ModBus address" + plural + str(args.addrs))
 
@@ -164,7 +164,7 @@ class Statistics():
 # modbus function 15 -> Force Multiple Coils
 # modbus function 16 -> Preset Multiple Registers
 
-def readRegister(device, address, stats, dbg, function):
+def readRegister(device, address, stats, dbg, function, numReg=1):
     modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
     v, failed = None, None
 
@@ -173,7 +173,12 @@ def readRegister(device, address, stats, dbg, function):
         print(modbusH)
 
     try:
-        v = modbusH.read_register(address, 0, function, False)
+        if (numReg == 1):
+            #           read_register(address, number of decimals, function, signed=False)
+            v = modbusH.read_register(address, 0, function, False)
+        else:
+            #           read_registers(address, numberOfRegisters, functionCode)
+            v = modbusH.read_registers(address, numReg, function)
         stats.goodReading(device, address, str(v))
         failed = False
     except IOError, ioe:
@@ -190,7 +195,10 @@ def readRegister(device, address, stats, dbg, function):
         failed = False
         try:
             time.sleep(args.intraDelay)
-            v = modbusH.read_register(address, 0, function, False)
+            if (numReg == 1):
+                v = modbusH.read_register(address, 0, function, False)
+            else:
+                v = modbusH.read_registers(address, numReg, function)
             stats.goodReading(device, address, str(v))
         except IOError, ioe:
             failed = True
@@ -211,54 +219,11 @@ def readRegister(device, address, stats, dbg, function):
 def readHoldingRegister(device, address, stats, dbg):
     return readRegister(device, address, stats, dbg, 3)
 
-
 def readInputRegister(device, address, stats, dbg):
     return readRegister(device, address, stats, dbg, 4)
 
-
 def readInputRegisters(device, address, stats, dbg):
-    modbusH = minimalmodbus.Instrument(COMPORT, device, mode='rtu')
-    v, failed = None, None
-
-    if (dbg == True):
-        modbusH.debug = True
-        print(modbusH)
-
-    try:
-        v = modbusH.read_registers(address, 6, 4)
-        stats.goodReading(device, address, str(v))
-        failed = False
-    except IOError, ioe:
-        failed = True
-        print("\t[IOError]", ioe.message, "\ttrying again...")
-        time.sleep(args.intraDelay)
-    except ValueError, ve:
-        failed = True
-        print("\t[ValueError]", ve.message, "\ttrying again...")
-        time.sleep(args.intraDelay)
-
-    if failed:
-        failed = False
-        try:
-            time.sleep(args.intraDelay)
-            v = modbusH.read_registers(address, 6, 4)
-            stats.goodReading(device, address, str(v))
-        except IOError, ioe:
-            failed = True
-            v = None
-            print("\t[IOError]", ioe.message)
-            stats.badReading(device, address, '[IOError] bad reading')
-        except ValueError, ve:
-            failed = True
-            v = None
-            print("\t[ValueError]", ve.message)
-            stats.badReading(device, address, '[ValueError] bad reading')
-
-    if not failed:
-        print(' ... OK')
-    time.sleep(args.intraDelay)
-    return v
-
+    return readRegister(device, address, stats, dbg, 4, numReg=6)
 
 
 def allDevicesHoldingRegister(address, stats, dbg):
