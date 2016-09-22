@@ -35,6 +35,7 @@ parser.add_argument('-D', '--desc', dest='desc', default='', metavar='DESC', typ
 parser.add_argument('-d', '--debug', dest='debug', action='store_true',
         help='minimalModBus debug mode?')
 
+ORIG_ARGS = sys.argv
 
 args = parser.parse_args()
 
@@ -136,6 +137,8 @@ class Statistics():
     def summarize(self):
         """ Tally up the statistics """
         for fact in (
+                '', '', '',
+                'Original arguments  {}'.format(ORIG_ARGS),
                 'Total readings      {}'.format(self.overall['total']),
                 'Successful readings {} ({:03.2f}%)'.format(self.overall['success'], (self.overall['success'] * 100.0 / self.overall['total'])),
                 'Failed readings     {} ({:03.2f}%)'.format(self.overall['failure'], (self.overall['failure'] * 100.0 / self.overall['total'])),
