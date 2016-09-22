@@ -255,7 +255,10 @@ try:
     while args.cycles - cycle != 0:
             cycle += 1
             print("==============================")
-            print("Cycle #%d" % cycle)
+            if args.cycles > 0:
+                print("Cycle #{}/{}".format(cycle, args.cycles))
+            else:
+                print("Cycle #{}".format(cycle))
             print("==============================")
 
             if args.read_multi:
@@ -271,7 +274,8 @@ try:
 
 except KeyboardInterrupt:
         print()
-        print("Terminating program...")
+        print()
+        print("Terminating program")
 
 except IOError , e:
         print()
