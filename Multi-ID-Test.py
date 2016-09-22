@@ -23,6 +23,10 @@ parser.add_argument('-e', '--inter-cycle-delay', dest='interDelay', default=5.0,
 parser.add_argument('-m', '--multi', dest='read_multi', default=1, metavar='N', type=int,
         help='Read a block of registers at once?')
 
+parser.add_argument('-r', '--retry', dest='retries', default=1, metavar='N', type=int,
+        help='How many attempts to make when a read fails?')
+
+
 parser.add_argument('-f', '--file', dest='file', default='', metavar='FILE', type=str,
         help='Filename to store CSV output')
 parser.add_argument('-D', '--desc', dest='desc', default='', metavar='DESC', type=str,
@@ -172,48 +176,40 @@ def readRegister(device, address, stats, dbg, function, numReg=1):
         modbusH.debug = True
         print(modbusH)
 
-    try:
-        if (numReg == 1):
-            #           read_register(address, number of decimals, function, signed=False)
-            v = modbusH.read_register(address, 0, function, False)
-        else:
-            #           read_registers(address, numberOfRegisters, functionCode)
-            v = modbusH.read_registers(address, numReg, function)
-        stats.goodReading(device, address, str(v))
-        failed = False
-    except IOError, ioe:
-        failed = True
-        print("\t[IOError]", ioe.message, "\ttrying again...")
-        time.sleep(args.intraDelay)
-    except ValueError, ve:
-        failed = True
-        print("\t[ValueError]", ve.message, "\ttrying again...")
-        time.sleep(args.intraDelay)
-
-
-    if failed:
-        failed = False
+    attempts, exns = 1, []
+    while attempts <= args.retries:
         try:
-            time.sleep(args.intraDelay)
-            if (numReg == 1):
+            if numReg == 1:
+                #           read_register(address, number of decimals, function, signed=False)
                 v = modbusH.read_register(address, 0, function, False)
             else:
+                #           read_registers(address, numberOfRegisters, functionCode)
                 v = modbusH.read_registers(address, numReg, function)
+            print(' ... OK')
             stats.goodReading(device, address, str(v))
-        except IOError, ioe:
-            failed = True
-            v = None
-            print("\t[IOError]", ioe.message)
-            stats.badReading(device, address, '[IOError] bad reading')
-        except ValueError, ve:
-            failed = True
-            v = None
-            print("\t[ValueError]", ve.message)
-            stats.badReading(device, address, '[ValueError] bad reading')
+            time.sleep(args.intraDelay)
+            break
+        except Exception, e:
+            errtype = ''
+            if issubclass(e.__class__, IOError):
+                errtype = '[IOError]'
+            elif issubclass(e.__class__, ValueError):
+                errtype = '[ValueError]'
+            else:
+                errtype = '[Exception]'
+            exns.append(errtype)
 
-    if not failed:
-        print(' ... OK')
-    time.sleep(args.intraDelay)
+            if attempts == 1:
+                print("\n\t({}/{}) ".format(attempts, args.retries), end='')
+            print("{} {}".format(errtype, e.message), end='')
+            attempts = attempts + 1
+            if attempts <= args.retries:
+                print("\n\t({}/{}) ".format(attempts, args.retries), end='')
+            time.sleep(args.intraDelay)
+
+    if attempts > args.retries:
+        print()
+        stats.badReading(device, address, str(exns))
     return v
 
 def readHoldingRegister(device, address, stats, dbg):
