@@ -150,13 +150,14 @@ class Statistics():
             self.descLine(fact)
 
         for addr in self.by_device.iteritems():
-            for fact in (
-                    'Dev #{:<3d} Total readings:      {}'.format(addr[0], addr[1]['total']),
-                    'Dev #{:<3d} Successful readings: {} ({:03.2f}%)'.format(addr[0], addr[1]['success'], addr[1]['success'] * 100.0 / addr[1]['total']),
-                    'Dev #{:<3d} Failed readings:     {} ({:03.2f}%)'.format(addr[0], addr[1]['failure'], addr[1]['failure'] * 100.0 / addr[1]['total']),
-                    ''):
-                print(fact)
-                self.descLine(fact)
+            if addr[1]['total'] != 0:
+                for fact in (
+                        'Dev #{:<3d} Total readings:      {}'.format(addr[0], addr[1]['total']),
+                        'Dev #{:<3d} Successful readings: {} ({:03.2f}%)'.format(addr[0], addr[1]['success'], addr[1]['success'] * 100.0 / addr[1]['total']),
+                        'Dev #{:<3d} Failed readings:     {} ({:03.2f}%)'.format(addr[0], addr[1]['failure'], addr[1]['failure'] * 100.0 / addr[1]['total']),
+                        ''):
+                    print(fact)
+                    self.descLine(fact)
 
         if self.file != sys.stdout:
             self.writeCSV()
@@ -273,19 +274,20 @@ try:
             time.sleep(args.interDelay)
 
 except KeyboardInterrupt:
-        print()
-        print()
-        print("Terminating program")
+    print()
+    print()
+    print("Terminating program")
 
 except IOError , e:
-        print()
-        print("IOError: %s %s (errno: %s)" % (e, e.message, e.errno))
-        print("Terminating program...")
+    print()
+    print("IOError: %s %s (errno: %s)" % (e, e.message, e.errno))
+    print("Terminating program...")
 
 except Exception, e:
-        print("[Generic exception] %s: %s" % (e, e.message))
+    print("[Generic exception] %s: %s" % (e, e.message))
 
 finally:
+    if statistics.overall['total'] != 0:
         print("==================================================")
         print("                 Final statistics")
         print("==================================================")
